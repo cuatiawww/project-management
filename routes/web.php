@@ -2,6 +2,10 @@
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ProjectController;
+use App\Http\Controllers\ProjectManager\DashboardController as PMDashboardController;
+use App\Http\Controllers\ProjectManager\ProjectController as PMProjectController;
+use App\Http\Controllers\Member\DashboardController as MemberDashboardController;
+use App\Http\Controllers\Member\ProjectController as MemberProjectController;
 use Illuminate\Support\Facades\Route;
 
 // Redirect root ke login jika belum login, ke dashboard jika sudah login
@@ -31,7 +35,6 @@ if (app()->environment('local')) {
         return redirect('/login');
     });
 }
-
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard route - redirect berdasarkan role
@@ -75,18 +78,29 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->group(fu
     ]);
 });
 
-// Project Manager Routes (untuk nanti)
+// Project Manager Routes
 Route::middleware(['auth', 'verified', 'role:project_manager'])->prefix('project-manager')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('project-manager.dashboard');
-    })->name('pm.dashboard');
+    Route::get('/dashboard', [PMDashboardController::class, 'index'])->name('pm.dashboard');
+    
+    // Project Management Routes for PM
+    Route::resource('projects', PMProjectController::class)->names([
+        'index' => 'pm.projects.index',
+        'create' => 'pm.projects.create',
+        'store' => 'pm.projects.store',
+        'show' => 'pm.projects.show',
+        'edit' => 'pm.projects.edit',
+        'update' => 'pm.projects.update',
+        'destroy' => 'pm.projects.destroy',
+    ]);
 });
 
-// Member Routes (untuk nanti) 
+// Member Routes
 Route::middleware(['auth', 'verified', 'role:member'])->prefix('member')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('member.dashboard');
-    })->name('member.dashboard');
+    Route::get('/dashboard', [MemberDashboardController::class, 'index'])->name('member.dashboard');
+    
+    // Project View Routes for Members (read-only)
+    Route::get('/projects', [MemberProjectController::class, 'index'])->name('member.projects.index');
+    Route::get('/projects/{project}', [MemberProjectController::class, 'show'])->name('member.projects.show');
 });
 
 require __DIR__.'/auth.php';
