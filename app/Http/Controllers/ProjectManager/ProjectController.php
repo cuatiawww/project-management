@@ -79,7 +79,7 @@ class ProjectController extends Controller
             'status' => $request->status,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
-            'project_manager_id' => $user->id, // PM assigns themselves
+            'project_manager_id' => $user->id, 
             'created_by' => $user->id,
             'is_active' => $request->boolean('is_active', true),
         ]);

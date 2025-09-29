@@ -17,13 +17,14 @@ class DashboardController extends Controller
             $query->where('user_id', $user->id);
         })->where('is_active', true);
 
-        // Project Statistics for this Member
+        // Project Statistics for this Member (semua status termasuk cancelled)
         $project_stats = [
             'total_projects' => $my_projects->count(),
             'completed_projects' => $my_projects->where('status', 'completed')->count(),
             'in_progress_projects' => $my_projects->where('status', 'in_progress')->count(),
             'planning_projects' => $my_projects->where('status', 'planning')->count(),
             'on_hold_projects' => $my_projects->where('status', 'on_hold')->count(),
+            'cancelled_projects' => $my_projects->where('status', 'cancelled')->count(),
         ];
 
         // Recent Projects (last 5 where I'm a member)
@@ -35,11 +36,11 @@ class DashboardController extends Controller
           ->take(5)
           ->get();
 
-        // Active Projects (current projects I'm working on)
+        // Active Projects (current projects I'm working on - exclude completed and cancelled)
         $active_projects = Project::whereHas('members', function($query) use ($user) {
             $query->where('user_id', $user->id);
         })->where('is_active', true)
-          ->whereIn('status', ['planning', 'in_progress'])
+          ->whereIn('status', ['planning', 'in_progress', 'on_hold'])
           ->with(['projectManager'])
           ->get();
 
@@ -47,7 +48,7 @@ class DashboardController extends Controller
         $overdue_projects = Project::whereHas('members', function($query) use ($user) {
             $query->where('user_id', $user->id);
         })->where('end_date', '<', now())
-          ->where('status', '!=', 'completed')
+          ->whereNotIn('status', ['completed', 'cancelled'])
           ->where('is_active', true)
           ->count();
 
@@ -56,7 +57,7 @@ class DashboardController extends Controller
             $query->where('user_id', $user->id);
         })->where('end_date', '>=', now())
           ->where('end_date', '<=', now()->addDays(7))
-          ->where('status', '!=', 'completed')
+          ->whereNotIn('status', ['completed', 'cancelled'])
           ->where('is_active', true)
           ->count();
 

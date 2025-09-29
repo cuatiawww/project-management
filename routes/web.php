@@ -98,9 +98,12 @@ Route::middleware(['auth', 'verified', 'role:project_manager'])->prefix('project
 Route::middleware(['auth', 'verified', 'role:member'])->prefix('member')->group(function () {
     Route::get('/dashboard', [MemberDashboardController::class, 'index'])->name('member.dashboard');
     
-    // Project View Routes for Members (read-only)
+    // Project View Routes for Members
     Route::get('/projects', [MemberProjectController::class, 'index'])->name('member.projects.index');
     Route::get('/projects/{project}', [MemberProjectController::class, 'show'])->name('member.projects.show');
+    
+    // Status Update Route
+    Route::patch('/projects/{project}/status', [MemberProjectController::class, 'updateStatus'])->name('member.projects.status');
 });
 
 require __DIR__.'/auth.php';

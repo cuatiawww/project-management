@@ -54,4 +54,48 @@ class ProjectController extends Controller
         $project->load(['projectManager', 'creator', 'members.role']);
         return view('member.projects.show', compact('project'));
     }
+
+    /**
+     * Update project status by member
+     */
+    public function updateStatus(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        
+        // Ensure member can only update status for projects they're assigned to
+        if (!$project->members->contains('id', $user->id)) {
+            abort(403, 'You are not assigned to this project.');
+        }
+
+        $request->validate([
+            'status' => ['required', 'in:planning,in_progress,completed,on_hold,cancelled'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $oldStatus = $project->status;
+        $newStatus = $request->status;
+
+        // Update project status
+        $project->update([
+            'status' => $newStatus
+        ]);
+
+        // Status labels untuk pesan
+        $statusLabels = [
+            'planning' => 'Perencanaan',
+            'in_progress' => 'Sedang Berjalan', 
+            'completed' => 'Selesai',
+            'on_hold' => 'Ditunda',
+            'cancelled' => 'Dibatalkan'
+        ];
+
+        $message = "Status project berhasil diubah dari '{$statusLabels[$oldStatus]}' ke '{$statusLabels[$newStatus]}'";
+        
+        if ($request->filled('notes')) {
+            $message .= " dengan catatan: " . $request->notes;
+        }
+
+        return redirect()->route('member.projects.show', $project)
+                        ->with('success', $message);
+    }
 }
