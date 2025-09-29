@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -47,7 +46,13 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Login successful',
             'data' => [
-                'user' => $user->load('role'),
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role->name,
+                    'role_display' => $user->role->display_name,
+                ],
                 'token' => $token,
                 'token_type' => 'Bearer'
             ]
@@ -75,44 +80,20 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        return response()->json([
-            'success' => true,
-            'data' => $request->user()->load('role')
-        ], 200);
-    }
-
-    /**
-     * Register API (Optional)
-     * POST /api/v1/register
-     */
-    public function register(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        // Default role: member (role_id = 3)
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role_id' => 3, // member
-            'email_verified_at' => now(),
-        ]);
-
-        // Create token
-        $token = $user->createToken('api-token')->plainTextToken;
+        $user = $request->user()->load('role');
 
         return response()->json([
             'success' => true,
-            'message' => 'Registration successful',
             'data' => [
-                'user' => $user->load('role'),
-                'token' => $token,
-                'token_type' => 'Bearer'
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role->name,
+                'role_display' => $user->role->display_name,
+                'is_active' => $user->is_active,
+                'email_verified_at' => $user->email_verified_at,
+                'created_at' => $user->created_at,
             ]
-        ], 201);
+        ], 200);
     }
 }
