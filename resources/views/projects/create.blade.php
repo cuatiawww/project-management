@@ -9,9 +9,15 @@
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">Buat Project Baru</h1>
-                <p class="text-gray-600">Buat project baru dan assign project manager serta members</p>
+                <p class="text-gray-600">
+                    @if(auth()->user()->isAdmin())
+                        Buat project baru dan assign project manager serta members
+                    @else
+                        Buat project baru dan assign members ke tim Anda
+                    @endif
+                </p>
             </div>
-            <a href="{{ route('admin.projects.index') }}" 
+            <a href="{{ auth()->user()->isAdmin() ? route('admin.projects.index') : route('pm.projects.index') }}" 
                class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -28,7 +34,7 @@
             <p class="text-sm text-gray-600">Lengkapi data project yang akan dibuat</p>
         </div>
         
-        <form method="POST" action="{{ route('admin.projects.store') }}" class="p-6">
+        <form method="POST" action="{{ auth()->user()->isAdmin() ? route('admin.projects.store') : route('pm.projects.store') }}" class="p-6">
             @csrf
 
             <!-- Basic Project Info -->
@@ -116,7 +122,8 @@
                 @enderror
             </div>
 
-            <!-- Project Manager Selection -->
+            <!-- Project Manager Selection (Admin Only) -->
+            @if(auth()->user()->isAdmin() && isset($projectManagers))
             <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-700 mb-3">
                     Project Manager <span class="text-red-500">*</span>
@@ -151,6 +158,7 @@
                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                 @enderror
             </div>
+            @endif
 
             <!-- Team Members Selection -->
             <div class="mb-6">
@@ -158,33 +166,36 @@
                     Team Members (Opsional)
                 </label>
                 <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
-                        @foreach($members as $member)
-                            <div class="flex items-center">
-                                <input type="checkbox" 
-                                       name="members[]" 
-                                       id="member_{{ $member->id }}" 
-                                       value="{{ $member->id }}"
-                                       {{ in_array($member->id, old('members', [])) ? 'checked' : '' }}
-                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                                <label for="member_{{ $member->id }}" class="ml-3 flex items-center cursor-pointer">
-                                    <div class="flex-shrink-0 h-8 w-8 bg-purple-500 rounded-full flex items-center justify-center mr-2">
-                                        <span class="text-xs font-medium text-white">
-                                            {{ substr($member->name, 0, 1) }}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900">{{ $member->name }}</p>
-                                        <p class="text-xs text-gray-500">{{ $member->email }}</p>
-                                    </div>
-                                </label>
-                            </div>
-                        @endforeach
-                    </div>
-                    @if($members->count() == 0)
+                    @if($members->count() > 0)
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
+                            @foreach($members as $member)
+                                <div class="flex items-center">
+                                    <input type="checkbox" 
+                                           name="members[]" 
+                                           id="member_{{ $member->id }}" 
+                                           value="{{ $member->id }}"
+                                           {{ in_array($member->id, old('members', [])) ? 'checked' : '' }}
+                                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                    <label for="member_{{ $member->id }}" class="ml-3 flex items-center cursor-pointer">
+                                        <div class="flex-shrink-0 h-8 w-8 bg-purple-500 rounded-full flex items-center justify-center mr-2">
+                                            <span class="text-xs font-medium text-white">
+                                                {{ substr($member->name, 0, 1) }}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">{{ $member->name }}</p>
+                                            <p class="text-xs text-gray-500">{{ $member->email }}</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
                         <p class="text-sm text-gray-500 text-center py-4">
-                            Belum ada user dengan role Member. 
-                            <a href="{{ route('admin.users.create') }}" class="text-indigo-600 hover:text-indigo-500">Buat user member dulu</a>
+                            Belum ada user dengan role Member yang tersedia.
+                            @if(auth()->user()->isAdmin())
+                                <a href="{{ route('admin.users.create') }}" class="text-indigo-600 hover:text-indigo-500">Buat user member dulu</a>
+                            @endif
                         </p>
                     @endif
                 </div>
@@ -214,7 +225,7 @@
 
             <!-- Action Buttons -->
             <div class="flex justify-end space-x-3">
-                <a href="{{ route('admin.projects.index') }}" 
+                <a href="{{ auth()->user()->isAdmin() ? route('admin.projects.index') : route('pm.projects.index') }}" 
                    class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-25 transition ease-in-out duration-150">
                     Batal
                 </a>
@@ -242,7 +253,11 @@
                 <div class="mt-2 text-sm text-blue-700">
                     <ul class="space-y-1">
                         <li>• Pastikan nama project jelas dan mudah dipahami</li>
-                        <li>• Pilih Project Manager yang berpengalaman dan tersedia</li>
+                        @if(auth()->user()->isAdmin())
+                            <li>• Pilih Project Manager yang berpengalaman dan tersedia</li>
+                        @else
+                            <li>• Anda akan otomatis menjadi Project Manager dari project ini</li>
+                        @endif
                         <li>• Tambahkan member sesuai kebutuhan skill project</li>
                         <li>• Set timeline yang realistis untuk menghindari keterlambatan</li>
                         <li>• Progress otomatis berdasarkan status project</li>

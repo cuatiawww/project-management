@@ -1,12 +1,11 @@
 <?php
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\ProjectController;
+use App\Http\Controllers\ProjectController; // UNIFIED CONTROLLER
 use App\Http\Controllers\ProjectManager\DashboardController as PMDashboardController;
-use App\Http\Controllers\ProjectManager\ProjectController as PMProjectController;
 use App\Http\Controllers\Member\DashboardController as MemberDashboardController;
-use App\Http\Controllers\Member\ProjectController as MemberProjectController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 // Redirect root ke login jika belum login, ke dashboard jika sudah login
 Route::get('/', function () {
@@ -25,8 +24,7 @@ Route::get('/', function () {
     return redirect('/login');
 });
 
-use Illuminate\Support\Facades\Auth;
-
+// Force logout untuk development
 if (app()->environment('local')) {
     Route::get('/force-logout', function () {
         Auth::logout();
@@ -51,11 +49,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 });
 
-// Admin Routes
+// ==========================
+// ADMIN ROUTES
+// ==========================
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     
-    // User Management Routes
+    // User Management
     Route::resource('users', UserController::class)->names([
         'index' => 'admin.users.index',
         'create' => 'admin.users.create',
@@ -66,7 +66,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->group(fu
         'destroy' => 'admin.users.destroy',
     ]);
 
-    // Project Management Routes
+    // Project Management (UNIFIED)
     Route::resource('projects', ProjectController::class)->names([
         'index' => 'admin.projects.index',
         'create' => 'admin.projects.create',
@@ -78,12 +78,14 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->group(fu
     ]);
 });
 
-// Project Manager Routes
+// ==========================
+// PROJECT MANAGER ROUTES
+// ==========================
 Route::middleware(['auth', 'verified', 'role:project_manager'])->prefix('project-manager')->group(function () {
     Route::get('/dashboard', [PMDashboardController::class, 'index'])->name('pm.dashboard');
     
-    // Project Management Routes for PM
-    Route::resource('projects', PMProjectController::class)->names([
+    // Project Management (UNIFIED)
+    Route::resource('projects', ProjectController::class)->names([
         'index' => 'pm.projects.index',
         'create' => 'pm.projects.create',
         'store' => 'pm.projects.store',
@@ -94,16 +96,18 @@ Route::middleware(['auth', 'verified', 'role:project_manager'])->prefix('project
     ]);
 });
 
-// Member Routes
+// ==========================
+// MEMBER ROUTES
+// ==========================
 Route::middleware(['auth', 'verified', 'role:member'])->prefix('member')->group(function () {
     Route::get('/dashboard', [MemberDashboardController::class, 'index'])->name('member.dashboard');
     
-    // Project View Routes for Members
-    Route::get('/projects', [MemberProjectController::class, 'index'])->name('member.projects.index');
-    Route::get('/projects/{project}', [MemberProjectController::class, 'show'])->name('member.projects.show');
+    // Project View (UNIFIED - Read Only)
+    Route::get('/projects', [ProjectController::class, 'index'])->name('member.projects.index');
+    Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('member.projects.show');
     
-    // Status Update Route
-    Route::patch('/projects/{project}/status', [MemberProjectController::class, 'updateStatus'])->name('member.projects.status');
+    // Status Update (Member Only)
+    Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('member.projects.status');
 });
 
 require __DIR__.'/auth.php';

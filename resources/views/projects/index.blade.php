@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'My Projects')
+@section('title', 'Projects')
 
 @section('content')
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -8,23 +8,41 @@
     <div class="mb-8">
         <div class="flex justify-between items-center">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900">My Projects</h1>
-                <p class="text-gray-600">Kelola semua project yang Anda manage</p>
+                <h1 class="text-3xl font-bold text-gray-900">
+                    @if(auth()->user()->isMember())
+                        My Projects
+                    @else
+                        Kelola Projects
+                    @endif
+                </h1>
+                <p class="text-gray-600">
+                    @if(auth()->user()->isAdmin())
+                        Kelola semua project yang sedang berjalan
+                    @elseif(auth()->user()->isProjectManager())
+                        Kelola semua project yang Anda manage
+                    @else
+                        Project yang saya ikuti sebagai member
+                    @endif
+                </p>
             </div>
-            <a href="{{ route('pm.projects.create') }}" 
-               class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-900 focus:outline-none focus:border-green-900 focus:ring ring-green-300 disabled:opacity-25 transition ease-in-out duration-150">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                Buat Project Baru
-            </a>
+            
+            @if(!auth()->user()->isMember())
+                <a href="{{ auth()->user()->isAdmin() ? route('admin.projects.create') : route('pm.projects.create') }}" 
+                   class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-900 focus:outline-none focus:border-green-900 focus:ring ring-green-300 disabled:opacity-25 transition ease-in-out duration-150">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Buat Project Baru
+                </a>
+            @endif
         </div>
     </div>
 
     <!-- Filters -->
     <div class="bg-white shadow rounded-lg mb-6">
         <div class="px-6 py-4">
-            <form method="GET" action="{{ route('pm.projects.index') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <form method="GET" action="{{ auth()->user()->isAdmin() ? route('admin.projects.index') : (auth()->user()->isProjectManager() ? route('pm.projects.index') : route('member.projects.index')) }}" 
+                  class="grid grid-cols-1 md:grid-cols-{{ auth()->user()->isAdmin() ? '4' : '3' }} gap-4">
                 <!-- Search -->
                 <div>
                     <label for="search" class="block text-sm font-medium text-gray-700">Cari Project</label>
@@ -47,9 +65,28 @@
                         <option value="in_progress" {{ request('status') == 'in_progress' ? 'selected' : '' }}>Sedang Berjalan</option>
                         <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Selesai</option>
                         <option value="on_hold" {{ request('status') == 'on_hold' ? 'selected' : '' }}>Ditunda</option>
-                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
+                        @if(!auth()->user()->isMember())
+                            <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
+                        @endif
                     </select>
                 </div>
+
+                <!-- Project Manager Filter (Admin Only) -->
+                @if(auth()->user()->isAdmin() && isset($projectManagers))
+                <div>
+                    <label for="project_manager" class="block text-sm font-medium text-gray-700">Project Manager</label>
+                    <select name="project_manager" 
+                            id="project_manager"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="">Semua PM</option>
+                        @foreach($projectManagers as $pm)
+                            <option value="{{ $pm->id }}" {{ request('project_manager') == $pm->id ? 'selected' : '' }}>
+                                {{ $pm->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
 
                 <!-- Actions -->
                 <div class="flex items-end space-x-2">
@@ -60,7 +97,7 @@
                         </svg>
                         Filter
                     </button>
-                    <a href="{{ route('pm.projects.index') }}" 
+                    <a href="{{ auth()->user()->isAdmin() ? route('admin.projects.index') : (auth()->user()->isProjectManager() ? route('pm.projects.index') : route('member.projects.index')) }}" 
                        class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-25 transition ease-in-out duration-150">
                         Reset
                     </a>
@@ -73,7 +110,7 @@
     @if($projects->count() > 0)
         <div class="space-y-4">
             @foreach($projects as $project)
-                <a href="{{ route('pm.projects.show', $project) }}" 
+                <a href="{{ auth()->user()->isAdmin() ? route('admin.projects.show', $project) : (auth()->user()->isProjectManager() ? route('pm.projects.show', $project) : route('member.projects.show', $project)) }}" 
                    class="block bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
                     <div class="p-6">
                         <!-- Header Row -->
@@ -106,7 +143,26 @@
                         </div>
 
                         <!-- Project Info Row -->
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <!-- Project Manager -->
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-8 w-8 bg-indigo-500 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-xs font-medium text-white">
+                                        {{ substr($project->projectManager->name, 0, 1) }}
+                                    </span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 truncate">
+                                        @if(auth()->user()->isProjectManager() && $project->project_manager_id === auth()->id())
+                                            Anda
+                                        @else
+                                            {{ $project->projectManager->name }}
+                                        @endif
+                                    </p>
+                                    <p class="text-xs text-gray-500">Project Manager</p>
+                                </div>
+                            </div>
+
                             <!-- Members Count -->
                             <div class="flex items-center">
                                 <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,19 +211,28 @@
                                     </div>
                                 @else
                                     <div class="flex items-center">
-                                        @if($project->is_active)
+                                        @if(!auth()->user()->isMember())
+                                            @if($project->is_active)
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    <svg class="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                                                        <circle cx="4" cy="4" r="3" />
+                                                    </svg>
+                                                    Aktif
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                    <svg class="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                                                        <circle cx="4" cy="4" r="3" />
+                                                    </svg>
+                                                    Non-aktif
+                                                </span>
+                                            @endif
+                                        @else
                                             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                                 <svg class="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 8 8">
                                                     <circle cx="4" cy="4" r="3" />
                                                 </svg>
-                                                Aktif
-                                            </span>
-                                        @else
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                <svg class="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 8 8">
-                                                    <circle cx="4" cy="4" r="3" />
-                                                </svg>
-                                                Non-aktif
+                                                On Track
                                             </span>
                                         @endif
                                     </div>
@@ -178,7 +243,13 @@
 
                     <!-- Hover indicator -->
                     <div class="bg-gray-50 px-6 py-2 border-t border-gray-200">
-                        <p class="text-xs text-gray-500 text-center">Klik untuk melihat detail dan kelola project</p>
+                        <p class="text-xs text-gray-500 text-center">
+                            @if(auth()->user()->isMember())
+                                Klik untuk melihat detail project
+                            @else
+                                Klik untuk melihat detail dan kelola project
+                            @endif
+                        </p>
                     </div>
                 </a>
             @endforeach
@@ -195,26 +266,34 @@
             </svg>
             <h3 class="mt-2 text-sm font-medium text-gray-900">Tidak ada project</h3>
             <p class="mt-1 text-sm text-gray-500">
-                @if(request()->hasAny(['search', 'status']))
+                @if(request()->hasAny(['search', 'status', 'project_manager']))
                     Tidak ada project yang sesuai dengan filter yang dipilih.
                 @else
-                    Anda belum membuat project. Mulai dengan membuat project baru.
+                    @if(auth()->user()->isMember())
+                        Anda belum ditugaskan ke project manapun.
+                    @else
+                        Anda belum membuat project. Mulai dengan membuat project baru.
+                    @endif
                 @endif
             </p>
             <div class="mt-6">
-                @if(request()->hasAny(['search', 'status']))
-                    <a href="{{ route('pm.projects.index') }}" 
+                @if(request()->hasAny(['search', 'status', 'project_manager']))
+                    <a href="{{ auth()->user()->isAdmin() ? route('admin.projects.index') : (auth()->user()->isProjectManager() ? route('pm.projects.index') : route('member.projects.index')) }}" 
                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
                         Reset Filter
                     </a>
                 @else
-                    <a href="{{ route('pm.projects.create') }}" 
-                       class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Buat Project Pertama
-                    </a>
+                    @if(!auth()->user()->isMember())
+                        <a href="{{ auth()->user()->isAdmin() ? route('admin.projects.create') : route('pm.projects.create') }}" 
+                           class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Buat Project Pertama
+                        </a>
+                    @else
+                        <p class="text-sm text-gray-500">Hubungi Project Manager untuk ditugaskan ke project.</p>
+                    @endif
                 @endif
             </div>
         </div>

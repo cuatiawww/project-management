@@ -12,54 +12,48 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         
-        // Get projects where this user is a member
-        $my_projects = Project::whereHas('members', function($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->where('is_active', true);
+        // Base query untuk projects member ini
+        $baseQuery = function() use ($user) {
+            return Project::whereHas('members', function($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })->where('is_active', true);
+        };
 
-        // Project Statistics for this Member (semua status termasuk cancelled)
+        // Project Statistics for this Member
         $project_stats = [
-            'total_projects' => $my_projects->count(),
-            'completed_projects' => $my_projects->where('status', 'completed')->count(),
-            'in_progress_projects' => $my_projects->where('status', 'in_progress')->count(),
-            'planning_projects' => $my_projects->where('status', 'planning')->count(),
-            'on_hold_projects' => $my_projects->where('status', 'on_hold')->count(),
-            'cancelled_projects' => $my_projects->where('status', 'cancelled')->count(),
+            'total_projects' => $baseQuery()->count(),
+            'completed_projects' => $baseQuery()->where('status', 'completed')->count(),
+            'in_progress_projects' => $baseQuery()->where('status', 'in_progress')->count(),
+            'planning_projects' => $baseQuery()->where('status', 'planning')->count(),
+            'on_hold_projects' => $baseQuery()->where('status', 'on_hold')->count(),
+            'cancelled_projects' => $baseQuery()->where('status', 'cancelled')->count(),
         ];
 
         // Recent Projects (last 5 where I'm a member)
-        $recent_projects = Project::whereHas('members', function($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->where('is_active', true)
-          ->with(['projectManager', 'creator'])
-          ->latest()
-          ->take(5)
-          ->get();
+        $recent_projects = $baseQuery()
+            ->with(['projectManager', 'creator'])
+            ->latest()
+            ->take(5)
+            ->get();
 
         // Active Projects (current projects I'm working on - exclude completed and cancelled)
-        $active_projects = Project::whereHas('members', function($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->where('is_active', true)
-          ->whereIn('status', ['planning', 'in_progress', 'on_hold'])
-          ->with(['projectManager'])
-          ->get();
+        $active_projects = $baseQuery()
+            ->whereIn('status', ['planning', 'in_progress', 'on_hold'])
+            ->with(['projectManager'])
+            ->get();
 
         // Overdue Projects (that I'm part of)
-        $overdue_projects = Project::whereHas('members', function($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->where('end_date', '<', now())
-          ->whereNotIn('status', ['completed', 'cancelled'])
-          ->where('is_active', true)
-          ->count();
+        $overdue_projects = $baseQuery()
+            ->where('end_date', '<', now())
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->count();
 
         // Projects ending soon (within 7 days)
-        $ending_soon_projects = Project::whereHas('members', function($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->where('end_date', '>=', now())
-          ->where('end_date', '<=', now()->addDays(7))
-          ->whereNotIn('status', ['completed', 'cancelled'])
-          ->where('is_active', true)
-          ->count();
+        $ending_soon_projects = $baseQuery()
+            ->where('end_date', '>=', now())
+            ->where('end_date', '<=', now()->addDays(7))
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->count();
 
         // Activity Summary
         $activity_summary = [
@@ -67,11 +61,10 @@ class DashboardController extends Controller
                 $query->where('user_id', $user->id)
                       ->where('project_members.created_at', '>=', Carbon::now()->subMonth());
             })->count(),
-            'completed_projects_this_month' => Project::whereHas('members', function($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })->where('status', 'completed')
-              ->where('updated_at', '>=', Carbon::now()->subMonth())
-              ->count(),
+            'completed_projects_this_month' => $baseQuery()
+                ->where('status', 'completed')
+                ->where('updated_at', '>=', Carbon::now()->subMonth())
+                ->count(),
         ];
 
         return view('member.dashboard', compact(

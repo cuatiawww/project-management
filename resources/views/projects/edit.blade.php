@@ -12,7 +12,7 @@
                 <p class="text-gray-600">Update informasi project "{{ $project->name }}"</p>
             </div>
             <div class="flex items-center space-x-3">
-                <a href="{{ route('admin.projects.show', $project) }}" 
+                <a href="{{ auth()->user()->isAdmin() ? route('admin.projects.show', $project) : route('pm.projects.show', $project) }}" 
                    class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -30,7 +30,7 @@
             <p class="text-sm text-gray-600">Ubah data project sesuai kebutuhan</p>
         </div>
         
-        <form method="POST" action="{{ route('admin.projects.update', $project) }}" class="p-6">
+        <form method="POST" action="{{ auth()->user()->isAdmin() ? route('admin.projects.update', $project) : route('pm.projects.update', $project) }}" class="p-6">
             @csrf
             @method('PUT')
 
@@ -120,7 +120,8 @@
                 @enderror
             </div>
 
-            <!-- Project Manager Selection -->
+            <!-- Project Manager Selection (Admin Only) -->
+            @if(auth()->user()->isAdmin() && isset($projectManagers))
             <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-700 mb-3">
                     Project Manager <span class="text-red-500">*</span>
@@ -162,6 +163,7 @@
                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                 @enderror
             </div>
+            @endif
 
             <!-- Team Members Selection -->
             <div class="mb-6">
@@ -169,36 +171,39 @@
                     Team Members (Opsional)
                 </label>
                 <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
-                        @foreach($members as $member)
-                            <div class="flex items-center">
-                                <input type="checkbox" 
-                                       name="members[]" 
-                                       id="member_{{ $member->id }}" 
-                                       value="{{ $member->id }}"
-                                       {{ in_array($member->id, old('members', $project->members->pluck('id')->toArray())) ? 'checked' : '' }}
-                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                                <label for="member_{{ $member->id }}" class="ml-3 flex items-center cursor-pointer">
-                                    <div class="flex-shrink-0 h-8 w-8 bg-purple-500 rounded-full flex items-center justify-center mr-2">
-                                        <span class="text-xs font-medium text-white">
-                                            {{ substr($member->name, 0, 1) }}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900">{{ $member->name }}</p>
-                                        <p class="text-xs text-gray-500">{{ $member->email }}</p>
-                                        @if($project->members->contains('id', $member->id))
-                                            <p class="text-xs text-green-600 font-medium">Current member</p>
-                                        @endif
-                                    </div>
-                                </label>
-                            </div>
-                        @endforeach
-                    </div>
-                    @if($members->count() == 0)
+                    @if($members->count() > 0)
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
+                            @foreach($members as $member)
+                                <div class="flex items-center">
+                                    <input type="checkbox" 
+                                           name="members[]" 
+                                           id="member_{{ $member->id }}" 
+                                           value="{{ $member->id }}"
+                                           {{ in_array($member->id, old('members', $project->members->pluck('id')->toArray())) ? 'checked' : '' }}
+                                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                    <label for="member_{{ $member->id }}" class="ml-3 flex items-center cursor-pointer">
+                                        <div class="flex-shrink-0 h-8 w-8 bg-purple-500 rounded-full flex items-center justify-center mr-2">
+                                            <span class="text-xs font-medium text-white">
+                                                {{ substr($member->name, 0, 1) }}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">{{ $member->name }}</p>
+                                            <p class="text-xs text-gray-500">{{ $member->email }}</p>
+                                            @if($project->members->contains('id', $member->id))
+                                                <p class="text-xs text-green-600 font-medium">Current member</p>
+                                            @endif
+                                        </div>
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
                         <p class="text-sm text-gray-500 text-center py-4">
-                            Belum ada user dengan role Member. 
-                            <a href="{{ route('admin.users.create') }}" class="text-indigo-600 hover:text-indigo-500">Buat user member dulu</a>
+                            Belum ada user dengan role Member yang tersedia.
+                            @if(auth()->user()->isAdmin())
+                                <a href="{{ route('admin.users.create') }}" class="text-indigo-600 hover:text-indigo-500">Buat user member dulu</a>
+                            @endif
                         </p>
                     @endif
                 </div>
@@ -228,7 +233,7 @@
 
             <!-- Action Buttons -->
             <div class="flex justify-end space-x-3">
-                <a href="{{ route('admin.projects.show', $project) }}" 
+                <a href="{{ auth()->user()->isAdmin() ? route('admin.projects.show', $project) : route('pm.projects.show', $project) }}" 
                    class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-25 transition ease-in-out duration-150">
                     Batal
                 </a>
@@ -259,7 +264,13 @@
                             <div>
                                 <p><strong>Status:</strong> {{ $project->status_label }}</p>
                                 <p><strong>Progress:</strong> {{ $project->progress }}%</p>
-                                <p><strong>Project Manager:</strong> {{ $project->projectManager->name }}</p>
+                                <p><strong>Project Manager:</strong> 
+                                    @if(auth()->user()->isProjectManager() && $project->project_manager_id === auth()->id())
+                                        Anda
+                                    @else
+                                        {{ $project->projectManager->name }}
+                                    @endif
+                                </p>
                             </div>
                             <div>
                                 <p><strong>Anggota Tim:</strong> {{ $project->members->count() }} member</p>
@@ -285,11 +296,16 @@
                 <h3 class="text-sm font-medium text-yellow-800">Tips Edit Project</h3>
                 <div class="mt-2 text-sm text-yellow-700">
                     <ul class="space-y-1">
-                        <li>• Hati-hati mengubah Project Manager - pastikan koordinasi dengan tim</li>
+                        @if(auth()->user()->isAdmin())
+                            <li>• Hati-hati mengubah Project Manager - pastikan koordinasi dengan tim</li>
+                        @endif
                         <li>• Perubahan member akan langsung mempengaruhi akses mereka ke project</li>
                         <li>• Progress otomatis berubah sesuai status yang dipilih</li>
                         <li>• Project yang dinonaktifkan tidak akan terlihat di dashboard member</li>
                         <li>• Timeline dapat diubah sesuai kebutuhan project</li>
+                        @if(auth()->user()->isProjectManager())
+                            <li>• Informasikan perubahan penting ke tim Anda</li>
+                        @endif
                     </ul>
                 </div>
             </div>
