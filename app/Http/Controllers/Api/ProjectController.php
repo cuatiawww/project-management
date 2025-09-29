@@ -346,10 +346,6 @@ class ProjectController extends Controller
             ]
         ], 200);
     }
-
-    /**
-     * BONUS: GET /api/v1/projects/statistics - Get project statistics
-     */
     public function statistics(): JsonResponse
     {
         $user = auth()->user();
